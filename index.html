@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SIMPLE RESTful API</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css"
+          integrity="sha384-mzrmE5qonljUremFsqc01SB46JvROS7bZs3IO2EmfFsd15uHvIt+Y8vEf7N7fWAU" crossorigin="anonymous">
+    <script src="http://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="http://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.12.1/themes/start/jquery-ui.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.2/angular.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="jumbotron text-center">
+        <h1>Simple RESTful API Example</h1>
+        <p>
+            <button class="btn-add btn btn-primary">Add friend</button>
+        </p>
+    </div>
+    <div ng-app="myApp" ng-controller="myFriends">
+        <div>
+            <form>
+                <div class="form-group">
+                    <input type="text" class="form-control" id="search" placeholder="Search..." ng-model="search">
+                </div>
+            </form>
+        </div>
+        <table id="friendstable" class="table table-bordered table-hover">
+            <tr class="active">
+                <td>id</td>
+                <td>name</td>
+                <td>city</td>
+                <td>Phone</td>
+                <td>Email</td>
+                <td>&nbsp;</td>
+            </tr>
+            <tr ng-repeat="friend in friends | filter:search">
+                <td>{{ friend.id }}</td>
+                <td>{{ friend.name }}</td>
+                <td>{{ friend.city }}</td>
+                <td>{{ friend.phone }}</td>
+                <td>{{ friend.email }}</td>
+                <td>
+                    <a class="btn-del btn btn-danger btn-sm" href="{{friend.id}}"><span class="fas fa-trash-alt"></span></a>
+                    <a class="btn-modify btn btn-warning btn-sm" href="{{friend.id}}"><span
+                            class="fas fa-pencil-alt"></span></a>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div id="friend-form" style="display: none;">
+    <form>
+        <div class="form-group row">
+            <label for="fname" class="col-sm-2 col-form-label">Name</label>
+            <div class="col-sm-10">
+                <input type="text" id="fname" class="form-control">
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="fcity" class="col-sm-2 col-form-label">City</label>
+            <div class="col-sm-10">
+                <input type="text" id="fcity" class="form-control">
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="fphone" class="col-sm-2 col-form-label">Phone</label>
+            <div class="col-sm-10">
+                <input type="text" id="fphone" class="form-control">
+            </div>
+        </div>
+        <div class="form-group row">
+            <label for="femail" class="col-sm-2 col-form-label">Email</label>
+            <div class="col-sm-10">
+                <input type="email" id="femail" class="form-control">
+            </div>
+        </div>
+        <!--
+        <div class="form-group float-right">
+            <button class="btn btn-success">Update <span class="fas fa-pencil-alt"></span></button>
+        </div>
+        -->
+    </form>
+</div>
+
+<script>
+    var app = angular.module("myApp", []);
+    app.controller("myFriends", function ($scope, $http) {
+        $http.get("./api/friend").then(function (result) {
+            $scope.friends = result.data;
+        })
+    });
+
+    $("#friendstable").on("click", ".btn-del", function (e) {
+        e.preventDefault();
+        var id = $(this).attr("href");
+        if (!id) return;
+
+        if (!confirm("want to delete??")) return;
+
+        $.ajax({
+            url: "./api/friend/" + id,
+            method: "DELETE",
+            success: function (data) {
+                var count = parseInt(data, 10);//decimal number
+                if (count) {
+                    location.reload();
+                } else {
+                    alert("Delete Error!!!");
+                }
+            }
+        });
+    });
+
+    $('#friendstable').on('click', '.btn-modify', function (e) {
+        e.preventDefault();
+        var id = $(this).attr("href");
+        if (!id) return;
+
+        $.getJSON('./api/friend/' + id, function (r) {
+            if (!r && !r[0]) return;
+
+            var data = r[0];
+
+            $('#fname').val(data.name);
+            $('#fcity').val(data.city);
+            $('#fphone').val(data.phone);
+            $('#femail').val(data.email);
+
+            $('#friend-form').dialog({
+                width: 600,
+                height: 350,
+                title: "modify friend",
+                modal: true,
+                buttons: {
+                    'save': function () {
+                        var newData = {
+                            name: $('#fname').val(),
+                            city: $('#fcity').val(),
+                            phone: $('#fphone').val(),
+                            email: $('#femail').val(),
+                            method: "PUT",
+                            id: id
+                        };
+
+                        saveFriend(newData);
+                    },
+                    'close': function () {
+                        $(this).dialog('close')
+                    },
+                }
+            });
+        });
+    });
+    /*
+    $.ajax({
+        url: "./api/friend",
+        method: "GET",
+        success: function(data){
+            console.log(data);
+        }
+    });
+    */
+
+    $('.btn-add').on('click', function (e) {
+
+        e.preventDefault();
+
+        $('#fname').val("");
+        $('#fcity').val("");
+        $('#fphone').val("");
+        $('#femail').val("");
+
+        $('#friend-form').dialog({
+            width: 600,
+            height: 350,
+            title: "Create friend",
+            modal: true,
+            buttons: {
+                'save': function () {
+                    var newData = {
+                        name: $('#fname').val(),
+                        city: $('#fcity').val(),
+                        phone: $('#fphone').val(),
+                        email: $('#femail').val(),
+                        method: "POST"
+                    };
+
+                    saveFriend(newData);
+                },
+                'close': function () {
+                    $(this).dialog('close')
+                },
+            }
+        });
+
+    });
+
+    function saveFriend(data) {
+        if (!data) return;
+        $.ajax({
+            url: './api/friend',
+            method: data.method,
+            data: data,
+            success: function (r) {
+                var count = parseInt(r, 10);//decimal number
+                if (count) {
+                    location.reload();
+                } else {
+                    alert("Save Error or nothing change!!!");
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
